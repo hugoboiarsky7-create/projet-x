@@ -1,4 +1,4 @@
-const V='pb-mwcq9syz';const F=["./","./assets/index-CQUpx2vB.css","./assets/index-DO3193Mf.js","./assets/inter-latin-200-normal-CGIQ4gbF.woff2","./assets/inter-latin-200-normal-fAycq8N-.woff","./icon-180.png","./icon-192.png","./icon-512.png","./index.html","./manifest.webmanifest"];
+const V='pb-mwcqed48';const F=["./","./assets/index-CQUpx2vB.css","./assets/index-DO3193Mf.js","./assets/inter-latin-200-normal-CGIQ4gbF.woff2","./assets/inter-latin-200-normal-fAycq8N-.woff","./icon-180.png","./icon-192.png","./icon-512.png","./index.html","./manifest.webmanifest"];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(F)).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x.slice(0,3)===V.slice(0,3)&&x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request,{ignoreSearch:true}).then(r=>r||fetch(e.request).then(n=>{const c=n.clone();caches.open(V).then(x=>x.put(e.request,c)).catch(()=>{});return n}).catch(()=>caches.match('./'))))});
