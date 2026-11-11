@@ -13,6 +13,7 @@ import holesJ from './data/holes.json';
 
 const cv = document.getElementById('c') as HTMLCanvasElement, g = cv.getContext('2d', { alpha: false })!;
 const HJ = holesJ as { flat: Record<string, number>; pars: Record<string, number> };
+for (const k in HJ.pars) HJ.pars[k] = Math.min(7, HJ.pars[k] + 1); // le bot a la main sûre : on laisse un coup de marge
 const series: Record<string, Series> = { m: main as Series };
 load();
 const key = (cid: string, day: number) => cid + Math.round(day * 100) / 100;
@@ -43,7 +44,7 @@ function enter(cid: string, first = false) {
   const p = S.pos[cid]; const x0 = p ? Math.min(p.x, c.xEnd) : c.holes[0].tee; A.hole = c.holeAt(x0); A.strokes = p ? p.n : 0;
   c.openCup(A.hole); A.ball.x = x0; A.ball.y = c.gy(x0) + TU.R; A.last = { ...A.ball }; A.fly = null; A.st = A.hole >= c.holes.length ? 'end' : 'aim'; A.endT = A.st === 'end' ? 0.01 : 0; placeMarks(); ensurePar(); frame(true); A.fade = 0; persist();
 }
-function ensurePar() { const c = A.c, h = c.holes[A.hole]; if (!h || h.par) return; h.par = humanPar(c, A.hole, 3, true); S.pars[key(A.cid, h.day)] = h.par; c.openCup(A.hole); }
+function ensurePar() { const c = A.c, h = c.holes[A.hole]; if (!h || h.par) return; h.par = Math.min(7, humanPar(c, A.hole, 3, true) + 1); S.pars[key(A.cid, h.day)] = h.par; c.openCup(A.hole); }
 function frame(snap = false) {
   const c = A.c, h = c.holes[A.hole], W = A.W, H = A.H; if (!W) return; const land = W > H; A.base = H * (land ? 0.66 : 0.6);
   let x0: number, x1: number;

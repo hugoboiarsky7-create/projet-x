@@ -1,0 +1,1 @@
+{ "name": "projet-b", "private": true, "version": "1.0.0", "type": "module", "scripts": { "dev": "vite", "build": "tsc --noEmit && vite build", "sim": "tsx tools/sim.ts", "glyphs": "node tools/glyphs.mjs" } }
