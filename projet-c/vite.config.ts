@@ -15,7 +15,7 @@ export default defineConfig({
       const v = Date.now().toString(36);
       writeFileSync('dist/sw.js', `const V='pc-${v}';const F=${JSON.stringify(['./', ...files.map((f) => './' + f)])};
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(F)).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x.slice(0,3)===V.slice(0,3)&&x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request,{ignoreSearch:true}).then(r=>r||fetch(e.request).then(n=>{const c=n.clone();caches.open(V).then(x=>x.put(e.request,c)).catch(()=>{});return n}).catch(()=>caches.match('./'))))});`);
     },
   }],
