@@ -13,8 +13,9 @@ export class Snd {
     try {
       const AC = (window as any).AudioContext || (window as any).webkitAudioContext; if (!AC) return;
       const ctx: AudioContext = new AC({ latencyHint: 'interactive' }); this.ctx = ctx;
-      const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 6; comp.connect(ctx.destination);
-      this.master = ctx.createGain(); this.master.gain.value = this.muted ? 0 : 0.9; this.master.connect(comp);
+      const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4; comp.knee.value = 12; comp.attack.value = 0.004; comp.release.value = 0.16; comp.connect(ctx.destination);
+      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 32; hp.connect(comp); const ls = ctx.createBiquadFilter(); ls.type = 'lowshelf'; ls.frequency.value = 110; ls.gain.value = 4.5; ls.connect(hp); const hs = ctx.createBiquadFilter(); hs.type = 'highshelf'; hs.frequency.value = 6500; hs.gain.value = -2; hs.connect(ls);
+      this.master = ctx.createGain(); this.master.gain.value = this.muted ? 0 : 0.9; this.master.connect(hs);
       this.mus = ctx.createGain(); this.mus.gain.value = 0.8; this.mus.connect(this.master);
       this.sfx = ctx.createGain(); this.sfx.gain.value = 0.9; this.sfx.connect(this.master);
       const nb = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = nb.getChannelData(0);
@@ -112,7 +113,7 @@ export class Snd {
   graze() { this.nz(this.t, 0.22, 0.16, 'bandpass', 900, 3, 5200); this.tone(this.t, 2400, 0.05, 0.1, 'sine', 3600); }
   death() { const t = this.t; this.tone(t, 260, 0.45, 0.55, 'sawtooth', 32, undefined, 0.003, 1800); this.nz(t, 0.4, 0.3, 'lowpass', 3000, 0.5, 200); }
   rewind() { this.tone(this.t, 200, 0.2, 0.3, 'sawtooth', 1600, undefined, 0.003, 3000); }
-  city() { const t = this.t; [0, 7, 12, 19].forEach((d, i) => this.tone(t + i * 0.05, mtof(57 + d), 0.12, 0.6, 'triangle')); this.tone(t, 90, 0.4, 0.5, 'sine', 35); }
+  city(sig = 0) { const t = this.t, root = 57 + [0, 2, -2, 3, -4, 5, 0, -5, 7, 4, -3][sig % 11], ch = [[0, 7, 12, 19], [0, 7, 14, 19], [0, 5, 12, 17], [0, 7, 12, 16], [0, 3, 10, 15]][sig % 5]; ch.forEach((d, i) => { this.tone(t + i * 0.06, mtof(root + d), 0.11, 0.9, 'triangle'); this.tone(t + i * 0.06, mtof(root + d + 12), 0.03, 0.5, 'sine'); }); this.tone(t, 82, 0.45, 0.6, 'sine', 33); }
   card() { const t = this.t; this.tone(t, 660, 0.12, 0.12, 'triangle'); this.tone(t + 0.07, 990, 0.12, 0.2, 'triangle'); }
   anvil() { const t = this.t; this.tone(t, 1240, 0.2, 0.7, 'sine'); this.tone(t, 1873, 0.12, 0.5, 'sine'); this.nz(t, 0.3, 0.04, 'highpass', 3000); }
   chime() { const t = this.t; this.tone(t, 1568, 0.07, 0.25, 'sine'); this.tone(t + 0.09, 2093, 0.06, 0.3, 'sine'); }
@@ -123,5 +124,5 @@ export class Snd {
   err() { this.tone(this.t, 110, 0.2, 0.15, 'square'); }
   piment() { this.tone(this.t, 500, 0.15, 0.2, 'sawtooth', 1500, undefined, 0.003, 3000); }
   tele() { this.tone(this.t, 880, 0.035, 0.08, 'square'); }
-  click() { this.tone(this.t, 900, 0.06, 0.03, 'square'); }
+  click() { const t = this.t; this.tone(t, 2637, 0.05, 0.05, 'sine'); this.tone(t, 3951, 0.03, 0.03, 'sine'); this.tone(t, 5274, 0.014, 0.02, 'sine'); }
 }

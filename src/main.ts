@@ -4,6 +4,12 @@ import { A, burst, toast, Overlay } from './app';
 import { S, load, persist, today, yesterday } from './save';
 import { Sim } from './sim';
 import { mkRng, hashStr, wrap, norm, clamp } from './rng';
+import '@fontsource/barlow-condensed/latin-500.css';
+import '@fontsource/barlow-condensed/latin-600.css';
+import '@fontsource/barlow-condensed/latin-700.css';
+import '@fontsource/inter/latin-300.css';
+import '@fontsource/inter/latin-400.css';
+import { post, FX } from './fin';
 import { layout, drawHomeWatch, drawRun, drawFx, drawHud, drawCards, drawOverlay, realAngles } from './draw';
 import { perksOf, caseK, drawBackCase } from './watch';
 import { deathLine, QUARTZ_TAUNTS, WIN_LINES, ACH } from './texts';
@@ -74,9 +80,9 @@ function events(s: Sim) {
       }
       case 'flip': A.snd.flip(); lastFlipT = s.time; break;
       case 'index': { A.snd.index(e.v!, s.cfg); const [x, y] = pos(e.a!); burst(x, y, 10, pal.lume, 140); vib(8); if (e.v! > 1) fl('×' + e.v, e.a!, pal.lume, 14); break; }
-      case 'graze': { A.snd.graze(); const [x, y] = pos(e.a!); burst(x, y, 14, '#ffffff', 220, 1.8); A.shake = Math.max(A.shake, 4); vib(14); fl('FRÔLÉ', e.a!, '#ffffff', 12); S.grazes++; break; }
+      case 'graze': { A.snd.graze(); const [x, y] = pos(e.a!); burst(x, y, 14, '#ffffff', 220, 1.8); A.shake = Math.max(A.shake, 4); FX.ca = 0.09; vib(14); fl('FRÔLÉ', e.a!, '#ffffff', 12); S.grazes++; break; }
       case 'perfect': A.snd.perfect(); A.flash = 0.5; A.flashCol = pal.lume; fl('TOUR PARFAIT', 0, pal.lume, 20, 0.3); ach('perfect'); S.perfects++; vib([20, 30, 20]); break;
-      case 'city': if (e.v! > 0) { A.snd.city(); A.flash = 0.7; A.flashCol = s.cfg.pal.hand; vib([15, 40, 30]); } A.cityPrev = e.v! > 0 ? A.cityName : ''; A.cityName = s.cfg.name; A.cityNameT = 2.2; prevSt = []; arcSeen = 0; if (s.cfg.id === 'tak') { S.tak = 1; ach('tak'); } break;
+      case 'city': if (e.v! > 0) { A.snd.city(s.ci); A.flash = 0.7; A.flashCol = s.cfg.pal.hand; vib([15, 40, 30]); } A.cityPrev = e.v! > 0 ? A.cityName : ''; A.cityName = s.cfg.name; A.cityNameT = 2.2; prevSt = []; arcSeen = 0; if (s.cfg.id === 'tak') { S.tak = 1; ach('tak'); } break;
       case 'clear': {
         const idx = CITIES.findIndex((x) => x.id === e.s); if (idx >= 0) { ach('c' + (idx + 1)); S.bestCity = Math.max(S.bestCity, idx + 1); }
         if (e.s === 'kan') { S.kan = 1; ach('kan'); }
@@ -103,7 +109,7 @@ function events(s: Sim) {
 }
 
 function onDeath(s: Sim) {
-  A.snd.death(); A.snd.quiet(); vib([30, 40, 90]); A.shake = 16;
+  A.snd.death(); A.snd.quiet(); vib([30, 40, 90]); A.shake = 16; FX.ca = 0.15; FX.shock = 0.45;
   const [x, y] = pos(s.a, s.ring ? 0.54 : 0.9); burst(x, y, 46, s.cfg.pal.lume, 320, 3); burst(x, y, 20, s.cfg.pal.hot, 200, 2.4);
   const hT: number[] = [], hA: number[] = []; const HN = s.hT.length;
   for (let k = 0; k < s.hc; k++) { const i = (s.hi - s.hc + k + HN) % HN; hT.push(s.hT[i]); hA.push(s.hA[i]); }
@@ -271,6 +277,7 @@ function homeButtons() {
 function renderDial() {
   const s = A.sim, W = G.W, H = G.H;
   c.fillStyle = s ? s.cfg.pal.bg : '#000'; c.fillRect(0, 0, W, H);
+  { const bgc = s ? s.cfg.pal.hand : '#8090a8', bg = c.createRadialGradient(G.cx - W * 0.2, G.cy - H * 0.22, 0, G.cx, G.cy, Math.max(W, H) * 0.75); bg.addColorStop(0, rgba(bgc, s ? 0.13 : 0.07)); bg.addColorStop(1, rgba(bgc, 0)); c.fillStyle = bg; c.fillRect(0, 0, W, H); }
   const first = S.runs === 0 && !A.overlay, fade = first ? clamp((A.boot - 0.8) / 2, 0, 1) : clamp(A.boot / 0.4, 0, 1);
   c.save();
   const sh = A.shake; c.translate(G.cx + (Math.random() - 0.5) * sh, G.cy + (Math.random() - 0.5) * sh); c.scale(A.zoom, A.zoom);
@@ -329,6 +336,8 @@ function render() {
   else renderCredits();
   if (fa > 0) { c.setTransform(G.dpr, 0, 0, G.dpr, 0, 0); if (sx < 0.3) { c.save(); c.translate(G.cx, G.cy); c.scale(Math.max(0.02, sx), 1); drawBackCase(c, G.R, S.eq, S.engr); c.restore(); } A.btns.length = 0; }
   if (A.flash > 0) { c.fillStyle = rgba(A.flashCol, Math.min(0.5, A.flash * 0.5)); c.fillRect(0, 0, G.W, G.H); }
+  if (FX.shock > 0) { const e = 1 - FX.shock / 0.45; c.strokeStyle = `rgba(255,255,255,${0.5 * (1 - e)})`; c.lineWidth = 2 + 6 * (1 - e); c.beginPath(); c.arc(G.cx, G.cy, G.R * (0.2 + 1.3 * e), 0, TAU); c.stroke(); FX.shock -= G.dt; }
+  post(c, G.cv, G.dt);
   if (A.titleT > 0) { const a = clamp(A.titleT / 0.12, 0, 1); c.fillStyle = `rgba(0,0,0,${0.9 * a})`; c.fillRect(0, 0, G.W, G.H); txt(c, 'CALIBRE 95', G.W / 2, G.H / 2, Math.min(52, G.W * 0.12), `rgba(255,255,255,${a})`, 'center', 700, Math.min(14, G.W * 0.03)); }
   if (A.toastT > 0) txt(c, A.toast, G.W / 2, G.H - G.sb - 84, 14, `rgba(255,255,255,${Math.min(1, A.toastT)})`, 'center', 600, 2);
 }

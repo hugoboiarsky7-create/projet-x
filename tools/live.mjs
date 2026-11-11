@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-const b = await chromium.launch();
+const b = await chromium.launch({ executablePath: process.env.PW_CHROME || undefined });
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
 const p = await ctx.newPage(); const errs = [];
 p.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message)); p.on('console', (m) => { if (m.type() === 'error') errs.push('CONSOLE ' + m.text()); });

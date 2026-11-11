@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-const b = await chromium.launch({ args: ['--enable-precise-memory-info'] });
+const b = await chromium.launch({ executablePath: process.env.PW_CHROME || undefined, args: ['--enable-precise-memory-info'] });
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
 const p = await ctx.newPage(); const errs = [];
 p.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message + ' ' + (e.stack || '').split('\n')[1]));

@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 mkdirSync('shots', { recursive: true });
 const url = process.argv[2] || 'http://localhost:4173/';
 const only = process.argv[3] || '';
-const b = await chromium.launch();
+const b = await chromium.launch({ executablePath: process.env.PW_CHROME || undefined });
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
 const p = await ctx.newPage();
 const errs = [];

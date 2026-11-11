@@ -42,7 +42,7 @@ function enter(cid: string, first = false) {
   if (!first) { S.pos[A.cid] = { x: A.ball.x, n: A.strokes }; S.tracks[A.cid] = [...A.tracks].slice(-500); }
   A.cid = cid; S.cur = cid; A.c = build(cid); const c = A.c; A.tracks = new Set(S.tracks[cid] || []);
   const p = S.pos[cid]; const x0 = p ? Math.min(p.x, c.xEnd) : c.holes[0].tee; A.hole = c.holeAt(x0); A.strokes = p ? p.n : 0;
-  c.openCup(A.hole); A.ball.x = x0; A.ball.y = c.gy(x0) + TU.R; A.last = { ...A.ball }; A.fly = null; A.st = A.hole >= c.holes.length ? 'end' : 'aim'; A.endT = A.st === 'end' ? 0.01 : 0; placeMarks(); ensurePar(); frame(true); A.fade = 0; persist();
+  c.openCup(A.hole); A.ball.x = x0; A.ball.y = c.gy(x0) + TU.R; A.last = { ...A.ball }; A.fly = null; A.st = A.hole >= c.holes.length ? 'end' : 'aim'; A.endT = A.st === 'end' ? 0.01 : 0; if (A.st === 'end' && cid === 'm' && !S.hourlyFrom) { S.hourlyFrom = Math.floor(c.pts[c.pts.length - 1].day) + 1; setTimeout(sync, 50); } placeMarks(); ensurePar(); frame(true); A.fade = 0; persist();
 }
 function ensurePar() { const c = A.c, h = c.holes[A.hole]; if (!h || h.par) return; h.par = Math.min(7, humanPar(c, A.hole, 3, true) + 1); S.pars[key(A.cid, h.day)] = h.par; c.openCup(A.hole); }
 function frame(snap = false) {

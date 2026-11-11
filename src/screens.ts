@@ -23,8 +23,13 @@ export function rouLabel(c: C2, x: number, y: number, n: number, px = 16, align:
   else { gearIcon(c, x + px * 0.45, y, px * 0.36, '#e8c25a'); txt(c, s, x + px * 1.15, y, px, '#e8c25a', 'left', 700); }
 }
 
+function bench(c: C2, lampX: number) { // l'établi : tapis de coupe, lampe, quadrillage
+  const W = G.W, H = G.H; c.fillStyle = '#0a100e'; c.fillRect(0, 0, W, H); c.strokeStyle = 'rgba(160,210,190,.05)'; c.lineWidth = 1; for (let x = (W / 2) % 24; x < W; x += 24) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H); c.stroke(); } for (let y = 0; y < H; y += 24) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+  c.strokeStyle = 'rgba(160,210,190,.1)'; for (let x = (W / 2) % 120; x < W; x += 120) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H); c.stroke(); } for (let y = 0; y < H; y += 120) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+  const l = c.createRadialGradient(lampX, H * 0.2, 0, lampX, H * 0.2, Math.max(W, H) * 0.8); l.addColorStop(0, 'rgba(255,222,170,.2)'); l.addColorStop(0.35, 'rgba(255,222,170,.06)'); l.addColorStop(1, 'rgba(0,0,0,.5)'); c.fillStyle = l; c.fillRect(0, 0, W, H);
+}
 export function drawAtelier(c: C2, add: Add, back: () => void) {
-  const W = G.W, H = G.H; c.fillStyle = '#070708'; c.fillRect(0, 0, W, H);
+  const W = G.W, H = G.H; bench(c, W * 0.5);
   const top = G.st + 30;
   txt(c, '‹', 26, top, 34, '#fff', 'center', 400); add(0, top - 30, 70, 60, back);
   txt(c, 'ÉTABLI', W / 2, top, 15, 'rgba(255,255,255,.7)', 'center', 600, 6);
@@ -45,7 +50,7 @@ export function drawAtelier(c: C2, add: Add, back: () => void) {
     drawHand(c, S.eq.hands, t.h, R * 0.52, R * 0.034, col, false, 1, false); drawHand(c, S.eq.hands, t.m, R * 0.8, R * 0.026, col, false, 1, false);
     c.rotate(t.s); c.strokeStyle = '#ff5a36'; c.lineWidth = 1.3; c.beginPath(); c.moveTo(0, R * 0.18); c.lineTo(0, -R * 0.9); c.stroke(); c.restore();
   }
-  const g = c.createLinearGradient(0, py + R * 1.2, 0, py + R * 1.7); g.addColorStop(0, 'rgba(7,7,8,0)'); g.addColorStop(1, '#070708'); c.fillStyle = g; c.fillRect(0, py + R * 1.2, W, R * 0.5 + 1);
+  const g = c.createLinearGradient(0, py + R * 1.2, 0, py + R * 1.7); g.addColorStop(0, 'rgba(10,16,14,0)'); g.addColorStop(1, '#0a100e'); c.fillStyle = g; c.fillRect(0, py + R * 1.2, W, R * 0.5 + 1);
   // onglets
   let y = py + R * 1.7 + 14; const tw = W / 4;
   CATS.forEach((ct, i) => {
@@ -60,7 +65,7 @@ export function drawAtelier(c: C2, add: Add, back: () => void) {
   list.forEach((p, i) => {
     const yy = y + i * rh, own = !!S.own[p.id], eq = (S.eq as any)[cat] === p.id;
     const locked = !own && ((p.lock === 'kan' && !S.kan) || (p.lock === 'back' && !S.backWon));
-    rr(c, 14, yy + 2, W - 28, rh - 4, 8); c.fillStyle = eq ? '#16150f' : '#0e0e10'; c.fill(); if (eq) { c.strokeStyle = '#e8c25a'; c.lineWidth = 1; c.stroke(); }
+    rr(c, 14, yy + 2, W - 28, rh - 4, 6); c.fillStyle = eq ? 'rgba(40,34,16,.92)' : 'rgba(8,10,10,.78)'; c.fill(); c.strokeStyle = eq ? '#e8c25a' : 'rgba(255,255,255,.07)'; c.lineWidth = 1; c.stroke();
     txt(c, locked ? '· · ·' : p.name.toUpperCase(), 28, yy + rh * 0.36, Math.min(14, rh * 0.27), locked ? 'rgba(255,255,255,.3)' : '#fff', 'left', 700, 1);
     c.font = `500 ${Math.min(12, rh * 0.22)}px ${FONT}`;
     const note = locked ? 'Ailleurs.' : wrapText(c, p.note, W - 150)[0];
@@ -76,7 +81,7 @@ export function drawAtelier(c: C2, add: Add, back: () => void) {
         if (p.id === 'quartz') { toast('Vraiment ?'); give('quartz'); }
         if (S.bought >= 10) give('horloger');
         if (PIECES.every((q) => S.own[q.id])) give('manuf');
-      } else A.snd.click();
+      } else { A.snd.click(); A.snd.buy?.(); try { navigator.vibrate?.([6, 30, 12]); } catch { /* */ } }
       if (p.id === 'libre' && (eq || !own)) { const t = prompt('Gravure', S.engr || ''); if (t != null) S.engr = t.slice(0, 40); }
       (S.eq as any)[cat] = p.id; persist();
     });

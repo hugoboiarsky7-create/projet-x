@@ -1,11 +1,14 @@
-export const FONT = "'Avenir Next Condensed','Roboto Condensed','DIN Condensed','sans-serif-condensed','Arial Narrow','Helvetica Neue',Arial,sans-serif";
+// Deux polices embarquées, pas plus : une étroite « cadran » pour les chiffres et les titres, une sans-serif pour les textes.
+export const FONT = "'Barlow Condensed','Avenir Next Condensed','Roboto Condensed','Arial Narrow',sans-serif";
+export const FONT2 = "Inter,'Helvetica Neue',Arial,sans-serif";
 export type C2 = CanvasRenderingContext2D;
 export const G = {
   cv: null as unknown as HTMLCanvasElement, c: null as unknown as C2,
   W: 0, H: 0, dpr: 1, cx: 0, cy: 0, R: 0, st: 0, sb: 0, now: 0, dt: 0,
 };
 export function txt(c: C2, s: string, x: number, y: number, px: number, col: string, align: CanvasTextAlign = 'center', w = 600, ls = 0) {
-  c.font = `${w} ${px}px ${FONT}`;
+  c.font = w <= 500 ? `${w === 500 ? 400 : w} ${px * 0.86}px ${FONT2}` : `${w} ${px}px ${FONT}`; if (w <= 500) ls = ls * 0.3;
+  try { (c as any).fontVariantNumeric = 'tabular-nums'; } catch { /* */ }
   c.textAlign = align; c.textBaseline = 'middle'; c.fillStyle = col;
   try { (c as any).letterSpacing = ls + 'px'; } catch { /* */ }
   c.fillText(s, x + (align === 'center' ? ls / 2 : 0), y);

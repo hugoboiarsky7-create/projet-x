@@ -1,5 +1,5 @@
 import { TAU, TU } from './tuning';
-import { G, C2, txt, rr, fmt, rgba, wrapText, FONT } from './g';
+import { G, C2, txt, rr, fmt, rgba, wrapText, FONT, FONT2 } from './g';
 import { A } from './app';
 import { S } from './save';
 import { wrap, clamp } from './rng';
@@ -7,10 +7,11 @@ import { drawCase, drawDial, drawHand, caseK, dialLight } from './watch';
 import type { Sim } from './sim';
 import type { Pal } from './cities';
 import { COMP, RAR, RARC } from './comps';
+import { sheen, glass, plate, TK, FX } from './fin';
 
 const HOME: Pal = { d0: '#1c1d20', d1: '#060607', ink: '#f1f1f1', hand: '#e9e9e9', hot: '#ff5a36', lume: '#ffe7a3', bg: '#000000' };
 let caseCv: HTMLCanvasElement | null = null, caseKey = '';
-let dialCv: HTMLCanvasElement | null = null, dialKey = '';
+let dialCv: HTMLCanvasElement | null = null, dialKey = '', prevDial: HTMLCanvasElement | null = null;
 const mk = (w: number, h: number) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; };
 
 export function layout() {
@@ -30,7 +31,7 @@ export function dialLayer(pal: Pal | null, label?: string, note?: string): HTMLC
   const day = new Date().getDate();
   const key = S.eq.dial + (pal ? pal.d0 + label : 'home') + G.R + day + G.dpr;
   if (!dialCv || dialKey !== key) {
-    const s = G.R * 2 + 4; dialCv = mk(s * G.dpr, s * G.dpr); dialKey = key;
+    const s = G.R * 2 + 4; prevDial = pal && dialCv && dialKey.indexOf('home') < 0 ? dialCv : null; dialCv = mk(s * G.dpr, s * G.dpr); dialKey = key;
     const c = dialCv.getContext('2d')!; c.scale(G.dpr, G.dpr); c.translate(s / 2, s / 2);
     drawDial(c, G.R, S.eq, pal, label, note, day);
   }
@@ -55,13 +56,14 @@ export function realAngles() {
 export function drawHomeWatch(c: C2, pulse: boolean) {
   const R = G.R, pal = dialLight(S.eq) ? { ...HOME, hand: '#1a1c20', ink: '#16181b' } : HOME;
   c.drawImage(caseLayer(), -G.cx, -G.cy, G.W, G.H);
-  const dl = dialLayer(null); c.drawImage(dl, -R - 2, -R - 2, R * 2 + 4, R * 2 + 4);
+  const dl = dialLayer(null); c.drawImage(dl, -R - 2, -R - 2, R * 2 + 4, R * 2 + 4); sheen(c, R, dialLight(S.eq) ? 1.6 : 1);
   const t = realAngles(), st = S.eq.hands;
   const hc = st === 'bleuies' ? '#3d6fd6' : pal.hand;
   drawHand(c, st, t.h, R * 0.52, R * 0.034, hc, false, 1, false);
   drawHand(c, st, t.m, R * 0.8, R * 0.026, hc, false, 1, false);
   secHand(c, t.s, R, pal.hot);
   if (pulse) { const [x, y] = pt(A.pA, R * 0.9); glowDot(c, x, y, R * 0.036 * (1 + 0.25 * Math.sin(G.now * 5)), HOME.lume); }
+  glass(c, R);
 }
 function secHand(c: C2, a: number, R: number, col: string, alpha = 1) {
   c.save(); c.rotate(a); c.globalAlpha = alpha; c.strokeStyle = col; c.lineWidth = Math.max(1.4, R * 0.011); c.lineCap = 'round';
@@ -77,7 +79,12 @@ export function drawRun(c: C2, s: Sim, T: number, pa: number) {
   const now = G.now;
   c.drawImage(caseLayer(), -G.cx, -G.cy, G.W, G.H);
   c.save(); c.rotate(A.rot);
-  const dl = dialLayer(pal, cfg.name, cfg.note || cfg.utc); c.drawImage(dl, -R - 2, -R - 2, R * 2 + 4, R * 2 + 4);
+  const dl = dialLayer(pal, cfg.name, cfg.note || cfg.utc);
+  // changement de ville : la matière se pose par balayage radial, en une seconde
+  const wipe = prevDial && A.cityNameT > 1.2 && !FX.low ? clamp((2.2 - A.cityNameT) / 1.0, 0, 1) : 1;
+  if (wipe < 1 && prevDial) { c.drawImage(prevDial, -R - 2, -R - 2, R * 2 + 4, R * 2 + 4); const e = 1 - Math.pow(1 - wipe, 3); c.save(); c.beginPath(); c.moveTo(0, 0); c.arc(0, 0, R + 3, -TAU / 4, -TAU / 4 + TAU * e); c.closePath(); c.clip(); c.drawImage(dl, -R - 2, -R - 2, R * 2 + 4, R * 2 + 4); c.restore(); c.save(); c.rotate(TAU * e); c.strokeStyle = rgba(pal.lume, 0.9 * (1 - e)); c.lineWidth = 2; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -R); c.stroke(); c.restore(); }
+  else c.drawImage(dl, -R - 2, -R - 2, R * 2 + 4, R * 2 + 4);
+  sheen(c, R, cfg.snow || cfg.gold ? 1.7 : 1);
   c.save(); c.beginPath(); c.arc(0, 0, R, 0, TAU); c.clip();
   const light = !!cfg.snow;
   // anneau intérieur
@@ -181,6 +188,7 @@ export function drawRun(c: C2, s: Sim, T: number, pa: number) {
   }
   if (cfg.snow) { c.fillStyle = 'rgba(255,255,255,.9)'; for (let i = 0; i < 46; i++) { const x = ((i * 97.3 + now * (8 + (i % 5) * 3)) % (2 * R)) - R, y = ((i * 61.7 + now * (26 + (i % 7) * 6)) % (2 * R)) - R; c.fillRect(x, y, 1.6 + (i % 3), 1.6 + (i % 3)); } }
   c.restore();
+  glass(c, R);
   c.restore();
 }
 
@@ -190,10 +198,16 @@ export function drawFx(c: C2) {
   for (const f of A.floats) txt(c, f.s, f.x, f.y, f.px, rgba(f.col, Math.min(1, f.l * 2)), 'center', 700);
 }
 
+let dispScore = 0;
+function counter(c: C2, target: number, x: number, y: number, px: number, col: string) {
+  if (target < dispScore) dispScore = target; const d = target - dispScore; dispScore = d < 1 ? target : dispScore + Math.max(1, d * Math.min(1, G.dt * 12));
+  const str = fmt(dispScore), fin = fmt(target), roll = dispScore !== target; c.font = `700 ${px}px ${FONT}`; const dw = c.measureText('0').width, sw = dw * 0.42; let w = 0; for (const ch of str) w += ch === ' ' ? sw : dw; let cx = x - w / 2;
+  for (let i = 0; i < str.length; i++) { const ch = str[i]; if (ch === ' ') { cx += sw; continue; } const moving = roll && fin[fin.length - (str.length - i)] !== ch; if (moving) { const f = (G.now * 9 + i) % 1; c.save(); c.beginPath(); c.rect(cx - 1, y - px * 0.5, dw + 2, px); c.clip(); txt(c, ch, cx + dw / 2, y - f * px * 0.5, px, rgba('#ffffff', 1 - f), 'center', 700); txt(c, String((+ch + 1) % 10), cx + dw / 2, y + (1 - f) * px * 0.5, px, rgba('#ffffff', f), 'center', 700); c.restore(); } else txt(c, ch, cx + dw / 2, y, px, col, 'center', 700); cx += dw; }
+}
 export function drawHud(c: C2, s: Sim) {
   const W = G.W, pal = s.cfg.pal, top = G.st + G.H * 0.085;
   const px = Math.min(W * 0.2, G.H * 0.1);
-  txt(c, fmt(s.score), W / 2, top, px, '#fff', 'center', 700, -1);
+  counter(c, s.score, W / 2, top, px, '#fff');
   let sub = ''; const m = s.mult();
   if (s.combo > 1) sub = 'COMBO ' + s.combo;
   if (m !== 1) sub += (sub ? '  ·  ' : '') + '×' + (m >= 10 ? Math.round(m) : m.toFixed(1).replace('.', ','));
@@ -244,8 +258,10 @@ export function drawCards(c: C2, s: Sim, add: (x: number, y: number, w: number, 
   s.cards.forEach((cd, i) => {
     const cp = COMP[cd.id], col = RARC[cd.lvl], off = (1 - clamp((t - i * 0.07) / 0.3, 0, 1)) * 40;
     c.globalAlpha = clamp((t - i * 0.07) / 0.3, 0, 1);
-    rr(c, x0, y + off, cw, ch, 10); c.fillStyle = '#0d0e11'; c.fill(); c.strokeStyle = col; c.lineWidth = 1.5; c.stroke();
-    c.fillStyle = col; c.fillRect(x0, y + off + 10, 3, ch - 20);
+    const mat = cd.lvl >= 2 ? TK.plat : cd.lvl === 1 ? TK.goldM : (['#aeb5bd', '#5d646c', '#24272c'] as [string, string, string]);
+    c.fillStyle = 'rgba(0,0,0,.5)'; rr(c, x0 + 2, y + off + 5, cw, ch, 8); c.fill(); rr(c, x0, y + off, cw, ch, 8); plate(c, x0, y + off, cw, ch, mat);
+    rr(c, x0 + 4, y + off + 4, cw - 8, ch - 8, 5); c.fillStyle = '#0b0c0f'; c.fill(); c.strokeStyle = 'rgba(0,0,0,.6)'; c.lineWidth = 1; c.stroke();
+    { const gx0 = x0 + 18 + ch * 0.3, gy0 = y + off + ch / 2, g0 = ch * 0.3; c.strokeStyle = 'rgba(255,255,255,.14)'; c.lineWidth = 0.7; c.setLineDash([6, 3, 1.500, 3]); c.beginPath(); c.moveTo(gx0 - g0 * 1.25, gy0); c.lineTo(gx0 + g0 * 1.25, gy0); c.moveTo(gx0, gy0 - g0 * 1.25); c.lineTo(gx0, gy0 + g0 * 1.25); c.stroke(); c.setLineDash([]); c.beginPath(); c.arc(gx0, gy0, g0 * 0.62, 0, TAU); c.stroke(); c.beginPath(); c.arc(gx0, gy0, g0 * 1.12, -0.5, 0.5); c.stroke(); }
     const gx = x0 + 18 + ch * 0.3, gy = y + off + ch / 2, gr = ch * 0.3;
     c.strokeStyle = rgba(col, 0.9); c.lineWidth = 1; c.beginPath(); c.arc(gx, gy, gr, 0, TAU); c.stroke();
     for (let k = 0; k < 12; k++) { const a = (k / 12) * TAU; c.beginPath(); c.moveTo(gx + Math.cos(a) * gr * 0.82, gy + Math.sin(a) * gr * 0.82); c.lineTo(gx + Math.cos(a) * gr * 0.95, gy + Math.sin(a) * gr * 0.95); c.stroke(); }
@@ -261,9 +277,9 @@ export function drawCards(c: C2, s: Sim, add: (x: number, y: number, w: number, 
   });
   // enclume
   const eh = ch * 0.62; c.globalAlpha = clamp((t - 0.25) / 0.3, 0, 1);
-  rr(c, x0, y, cw, eh, 10); c.fillStyle = '#16120a'; c.fill(); c.strokeStyle = '#8a6a2a'; c.lineWidth = 1.2; c.setLineDash([5, 4]); c.stroke(); c.setLineDash([]);
-  txt(c, 'L\'ENCLUME', x0 + 20, y + eh * 0.36, Math.min(17, eh * 0.3), '#e8c25a', 'left', 700, 2);
-  txt(c, 'Au hasard. Ça paie.' + (s.has('bravoure') ? ' Bravoure.' : ''), x0 + 20, y + eh * 0.7, Math.min(13, eh * 0.22), 'rgba(255,255,255,.6)', 'left', 500);
+  c.fillStyle = 'rgba(0,0,0,.55)'; rr(c, x0 + 2, y + 5, cw, eh, 6); c.fill(); rr(c, x0, y, cw, eh, 6); plate(c, x0, y, cw, eh, ['#4a4338', '#221e17', '#0c0a07'], 1.6); c.strokeStyle = '#8a6a2a'; c.lineWidth = 1.2; c.stroke(); for (const [bx, by] of [[10, 10], [cw - 10, 10], [10, eh - 10], [cw - 10, eh - 10]]) { c.fillStyle = '#0c0a07'; c.beginPath(); c.arc(x0 + bx, y + by, 3.2, 0, TAU); c.fill(); c.fillStyle = '#b08a3a'; c.beginPath(); c.arc(x0 + bx - 0.5, y + by - 0.5, 2.2, 0, TAU); c.fill(); }
+  txt(c, 'L\'ENCLUME', x0 + 26, y + eh * 0.36, Math.min(17, eh * 0.3), '#e8c25a', 'left', 700, 2);
+  txt(c, 'Au hasard. Ça paie.' + (s.has('bravoure') ? ' Bravoure.' : ''), x0 + 26, y + eh * 0.7, Math.min(13, eh * 0.22), 'rgba(255,255,255,.6)', 'left', 500);
   txt(c, '?', x0 + cw - 30, y + eh / 2, eh * 0.6, '#e8c25a', 'center', 700);
   if (ready) { const yy = y; add(x0, yy, cw, eh, () => onPick(-1)); }
   y += eh + gap + 6;
@@ -277,7 +293,7 @@ export function drawOverlay(c: C2) {
   c.fillStyle = g; c.fillRect(0, 0, W, H);
   const top = G.st + H * 0.085, px = Math.min(W * 0.2, H * 0.1);
   c.globalAlpha = a;
-  { let lp = Math.min(21, W * 0.054); c.font = `600 ${lp}px ${FONT}`; const lw = c.measureText(o.line).width; if (lw > W - 36) lp *= (W - 36) / lw; txt(c, o.line, W / 2, G.cy - G.R * caseK(S.eq) - 30, lp, '#fff', 'center', 600, 0.5); }
+  { const lp = Math.min(30, W * 0.074); c.font = `300 ${lp}px ${FONT2}`; const lines = wrapText(c, o.line, W - 44).slice(0, 2); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff'; lines.forEach((ln, i) => c.fillText(ln, W / 2, G.cy - G.R * caseK(S.eq) - 34 - (lines.length - 1 - i) * lp * 1.15)); }
   txt(c, fmt(o.score), W / 2, top, px, o.won ? '#ffe7a3' : '#fff', 'center', 700, -1);
   txt(c, o.best ? 'RECORD' : 'RECORD ' + fmt(S.best), W / 2, top + px * 0.64, 12, o.best ? '#ffe7a3' : 'rgba(255,255,255,.5)', 'center', 700, 3);
   const y = G.cy + G.R * caseK(S.eq) + 34;
